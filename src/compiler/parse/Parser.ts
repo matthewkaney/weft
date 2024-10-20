@@ -27,7 +27,7 @@ export class Parser extends BaseParser<Stmt[]> {
         this.advance();
       } else {
         try {
-          statements.push(this.expressionStatement());
+          statements.push(this.bindingStatement());
         } catch (error) {
           if (error instanceof ParseError) {
             this.reporter.error(error.token, error.message);
@@ -43,8 +43,8 @@ export class Parser extends BaseParser<Stmt[]> {
     return statements;
   }
 
-  private expressionStatement() {
-    const expression = this.expression(0);
+  private statement() {
+    const expression = this.bindingStatement();
 
     if (!this.isAtEnd()) {
       // This surely means we've encountered an error
@@ -57,6 +57,10 @@ export class Parser extends BaseParser<Stmt[]> {
     }
 
     return Stmt.Expression(expression);
+  }
+
+  private bindingStatement() {
+    const expression = this.expression(0);
   }
 
   private expression(precedence: number) {

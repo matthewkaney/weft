@@ -34,6 +34,9 @@ export enum TokenType {
   Operator = "OPERATOR",
   ConSymbol = "CON_SYMBOL",
 
+  // Code literal for embedded JS
+  CodeLiteral = "CODE_LITERAL",
+
   // Literals
   String = "STRING",
   Number = "NUMBER",

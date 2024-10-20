@@ -65,11 +65,46 @@ export class Scanner {
       // If the symbol matches the token "dashes",
       // then consume a single-line comment
       while (this.peek() != "\n" && !this.isAtEnd()) this.advance();
+    } else if (string === "@") {
+      // Check for source literal
+      if (this.peek() === "{") {
+        // Consume source literal
+        this.codeLiteral();
+      }
     } else if (string in reservedop) {
       this.addToken(reservedop[string]);
     } else {
       this.addToken(TokenType.Operator);
     }
+  }
+
+  private codeLiteral() {
+    // At this point we've consumed the initial @
+    this.advance(); // Consume the opening brace
+
+    let braces = 1;
+
+    while (braces > 0) {
+      if (this.isAtEnd()) {
+        this.addErrorToken("Unterminated code literal.");
+        return;
+      }
+
+      let next = this.advance();
+
+      if (next === "{") {
+        braces += 1;
+      } else if (next === "}") {
+        braces -= 1;
+      } else if (next === "\n") {
+        this.advanceLine();
+      }
+    }
+
+    // Trim the "@{" from the beginning and the "}" from the end
+    let code = this.source.substring(this.start + 2, this.current - 1);
+
+    this.addToken(TokenType.CodeLiteral, code);
   }
 
   private conSymbol() {
