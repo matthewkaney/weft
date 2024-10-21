@@ -61,19 +61,23 @@ export class Interpreter {
     switch (stmt.type) {
       case Stmt.Type.Expression:
         return this.evaluate(stmt.expression) as any;
-      // case Stmt.Type.Print:
-      //   //const value = this.evaluate(stmt.expression);
-      //   //return [this.stringify(value)];
-      //   return;
-      // case Stmt.Type.Var: {
-      //   // let value: LoxType = null;
-      //   // if (stmt.initializer != null) {
-      //   //   value = this.evaluate(stmt.initializer);
-      //   // }
+      case Stmt.Type.Binding:
+        let { name, args, initializer } = stmt;
+        let argNames = args.map(({ lexeme }) => lexeme);
 
-      //   // this.environment.define(stmt.name.lexeme, value);
-      //   return;
-      // }
+        if (typeof initializer.literal !== "string") {
+          throw new Error("Initializer doesn't contain a source code string");
+        }
+
+        let func = new Function(...argNames, initializer.literal);
+
+        // For now, use a mutable binding environment
+        this.bindings[name.lexeme] = {
+          type: "",
+          value: args.length > 0 ? func : func(),
+        };
+
+        return;
     }
   }
 
@@ -135,6 +139,15 @@ export class Interpreter {
     throw new Error("Unexpected function");
   }
 }
+
+// Utility for currying functions
+// function curried(func: Function, arity: number, ...args: any[]) {
+//   if (args.length === arity) {
+//     return func(...args);
+//   } else {
+//     return (arg: any) => curried(func, arity - 1, arg, ...args);
+//   }
+// }
 
 export class RuntimeError extends Error {
   constructor(readonly token: Token, message: string) {

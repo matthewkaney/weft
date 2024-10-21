@@ -8,7 +8,7 @@ import { TypeParser } from "./TypeParser";
 
 import { makeContext, PolyType } from "./Types";
 import { W } from "./Inference";
-import { UnificationError } from "./Utilities";
+import { makeSubstitution, UnificationError } from "./Utilities";
 
 export class TypeChecker {
   private environment: { [name: string]: PolyType } = {};
@@ -36,13 +36,15 @@ export class TypeChecker {
     }
   }
 
-  check(statement: Stmt) {
+  check(statement: Stmt): ReturnType<typeof W> {
     try {
       switch (statement.type) {
         case Stmt.Type.Expression:
           return W(makeContext(this.environment), statement.expression);
+        case Stmt.Type.Binding:
+          return [makeSubstitution({}), null, []];
         default:
-          return statement.type satisfies never;
+          return statement satisfies never;
       }
     } catch (e) {
       if (e instanceof UnificationError && e.type2) {

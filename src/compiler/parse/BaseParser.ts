@@ -1,9 +1,10 @@
+import { Expr } from "./Expr";
 import { ErrorReporter } from "./Reporter";
 import { ErrorToken, Token } from "../scan/Token";
 import { TokenType } from "../scan/TokenType";
 
 export class ParseError extends Error {
-  constructor(readonly token: Token, message: string = "Parse error.") {
+  constructor(readonly source: Token | Expr, message: string = "Parse error.") {
     super(message);
   }
 }

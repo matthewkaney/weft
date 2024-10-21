@@ -13,8 +13,10 @@ export function renamer(
       case Stmt.Type.Expression:
         expressionRenamer(stmt.expression, context, reporter);
         break;
+      case Stmt.Type.Binding:
+        break;
       default:
-        stmt.type satisfies never;
+        stmt satisfies never;
     }
   }
 }

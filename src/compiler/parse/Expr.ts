@@ -63,7 +63,7 @@ export namespace Expr {
     operator: Token,
     expression: Expr,
     side: "left" | "right"
-  ) {
+  ): Expr {
     return { type: Expr.Type.Section, operator, expression, side };
   }
 

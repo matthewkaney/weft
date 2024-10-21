@@ -5,7 +5,7 @@ import { Operators } from "./API";
 import { Token } from "../scan/Token";
 import { TokenType } from "../scan/TokenType";
 
-import { Expr } from "./Expr";
+import { Expr, expressionBounds } from "./Expr";
 import { Stmt } from "./Stmt";
 import { ErrorReporter } from "./Reporter";
 
@@ -27,10 +27,15 @@ export class Parser extends BaseParser<Stmt[]> {
         this.advance();
       } else {
         try {
-          statements.push(this.bindingStatement());
+          statements.push(this.statement());
         } catch (error) {
           if (error instanceof ParseError) {
-            this.reporter.error(error.token, error.message);
+            if ("from" in error.source) {
+              this.reporter.error(error.source, error.message);
+            } else {
+              let { from, to } = expressionBounds(error.source);
+              this.reporter.error(from, to, error.message);
+            }
             this.synchronize();
             break;
           } else {
@@ -44,26 +49,70 @@ export class Parser extends BaseParser<Stmt[]> {
   }
 
   private statement() {
-    const expression = this.bindingStatement();
+    const statement = this.declaration();
 
     if (!this.isAtEnd()) {
-      // This surely means we've encountered an error
-      if (expression.type === Expr.Type.Empty) {
-        let next = this.advance();
-        throw new ParseError(next, `Unexpected token "${next.lexeme}"`);
-      }
-
       this.consume(TokenType.LineBreak, "Expect new line after expression.");
+    }
+
+    return statement;
+  }
+
+  private declaration() {
+    const expression = this.expression(0);
+
+    if (this.peek().type === TokenType.ColonColon) {
+      throw new Error("Parsing type annotations isn't supported yet");
+
+      // if (expression.type !== Expr.Type.Variable) {
+      //   throw new ParseError(
+      //     expression,
+      //     "Left-hand side of a type annotation needs to be a variable"
+      //   );
+      // }
+
+      // let { name } = expression;
+    } else if (this.peek().type === TokenType.Equal) {
+      let [name, ...args] = this.parseFunlhs(expression);
+
+      // Consume equals sign
+      this.advance();
+
+      // For now, let's just consume a single source code literal
+      let initializer = this.consume(
+        TokenType.CodeLiteral,
+        "Right-hand sign of an assignment variable must be foreign Javascript block"
+      );
+
+      return Stmt.Binding(name, args, initializer);
     }
 
     return Stmt.Expression(expression);
   }
 
-  private bindingStatement() {
-    const expression = this.expression(0);
+  private parseFunlhs(expr: Expr): Token[] {
+    function variable(varExp: Expr): Token {
+      if (varExp.type === Expr.Type.Variable) {
+        return varExp.name;
+      }
+
+      throw new ParseError(
+        varExp,
+        "Expected variable on the left-hand side of assignment"
+      );
+    }
+
+    switch (expr.type) {
+      case Expr.Type.Application:
+        return [...this.parseFunlhs(expr.left), variable(expr.right)];
+      case Expr.Type.Binary:
+      // TODO
+      default:
+        return [variable(expr)];
+    }
   }
 
-  private expression(precedence: number) {
+  private expression(precedence: number): Expr {
     let left = this.application();
 
     while (this.peek().type === TokenType.Operator) {
@@ -132,7 +181,7 @@ export class Parser extends BaseParser<Stmt[]> {
     );
   }
 
-  private grouping() {
+  private grouping(): Expr {
     if (this.match(TokenType.LeftParen)) {
       let leftParen = this.previous();
       let leftOp: Token | null = null;

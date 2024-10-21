@@ -13,6 +13,7 @@ import { editorTheme } from "./theme";
 // @ts-ignore
 import { dracula } from "thememirror/dist/index.js";
 
+import { Stmt } from "../compiler/parse/Stmt";
 import { Scanner } from "../compiler/scan/Scanner";
 import { Parser } from "../compiler/parse/Parser";
 import { ErrorReporter } from "../compiler/parse/Reporter";
@@ -164,12 +165,14 @@ const parseLinter = linter((view) => {
     const typechecker = new TypeChecker(reporter, typeBindings);
 
     for (let stmt of stmts) {
-      let [_s, _t, annotations] = typechecker.check(stmt);
+      if (stmt.type === Stmt.Type.Expression) {
+        let [_s, _t, annotations] = typechecker.check(stmt);
 
-      let annotationMap = new WeakMap(annotations.map((a) => [a.expr, a]));
-      diagnostics = diagnostics.concat(
-        generateTypeDiagnostics(stmt.expression, annotationMap)
-      );
+        let annotationMap = new WeakMap(annotations.map((a) => [a.expr, a]));
+        diagnostics = diagnostics.concat(
+          generateTypeDiagnostics(stmt.expression, annotationMap)
+        );
+      }
     }
 
     if (reporter.hasError) {
